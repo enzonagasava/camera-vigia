@@ -23,7 +23,7 @@ class VideoStorage:
         timestamp = datetime.now().strftime(
             "%Y%m%d_%H%M%S"
         )
-
+        print (self.fps)
         path = self.directory / f"capture_{timestamp}.mp4"
 
         codec = cv2.VideoWriter_fourcc(

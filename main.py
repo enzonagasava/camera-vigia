@@ -1,7 +1,7 @@
 import cv2
 import threading
 import uvicorn
-
+from datetime import datetime
 from app.streaming.hls import HLSStream
 from app.streaming.server import app
 from app.camera.capture import CameraCapture
@@ -27,6 +27,23 @@ from app.processing.pipeline import ProcessingPipeline
 from app.storage.video import VideoStorage
 from app.storage.images import ImageStorage
 
+def add_timestamp(frame):
+    timestamp = datetime.now().strftime(
+        "%d/%m/%Y %H:%M:%S"
+    )
+
+    cv2.putText(
+        frame,
+        timestamp,
+        (frame.shape[1] - 270, 50),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.7,
+        (255, 255, 255),
+        2,
+        cv2.LINE_AA,
+    )
+
+    return frame
 
 def main():
 
@@ -75,9 +92,9 @@ def main():
     # Recebe frames do OpenCV.
     # ---------------------------------------------------------
 
-    STREAM_WIDTH = 640
-    STREAM_HEIGHT = 360
-    STREAM_FPS = 10
+    STREAM_WIDTH = 1280
+    STREAM_HEIGHT = 720
+    STREAM_FPS = 15
 
     hls_stream = HLSStream(
         output_dir="storage/hls",
@@ -161,7 +178,8 @@ def main():
             )
 
             processed_frame = result.frame
-
+            
+            processed_frame = add_timestamp(processed_frame)
             # ================================================
             # 3. MOVIMENTO
             # ================================================
@@ -228,20 +246,6 @@ def main():
                 video_storage.write(
                     processed_frame
                 )
-
-            # ================================================
-            # 6. JANELA LOCAL
-            # ================================================
-
-            cv2.imshow(
-                WINDOW_NAME,
-                processed_frame,
-            )
-
-            key = cv2.waitKey(1) & 0xFF
-
-            if key == 27:
-                break
 
     except KeyboardInterrupt:
 

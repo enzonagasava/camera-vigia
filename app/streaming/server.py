@@ -53,13 +53,11 @@ def index():
                 height: 100%;
                 object-fit: contain;
             }
-
         </style>
 
     </head>
 
     <body>
-
         <video
             id="video"
             autoplay
@@ -67,7 +65,6 @@ def index():
             playsinline
             controls
         ></video>
-
         <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
         <script>

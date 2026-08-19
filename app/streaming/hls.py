@@ -8,9 +8,9 @@ class HLSStream:
     def __init__(
         self,
         output_dir: str,
-        width: int = 640,
-        height: int = 360,
-        fps: int = 10,
+        width: int = 1920,
+        height: int = 1080,
+        fps: int = 15,
     ):
         self.output_dir = Path(output_dir)
 
@@ -52,13 +52,32 @@ class HLSStream:
 
             "-i",
             "-",
-
+            
+            "-vf",
+            "drawtext="
+            "fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf:"
+            "text='%{localtime}':"
+            "x=w-tw-20:"
+            "y=20:"
+            "fontsize=28:"
+            "fontcolor=white:"
+            "box=1:"
+            "boxcolor=black@0.6:"
+            "boxborderw=10", 
+                        
             # H264
             "-c:v",
             "libx264",
 
             "-preset",
             "veryfast",
+            
+            "-g", "15",
+            "-keyint_min", "1",
+            "-sc_threshold", "0",
+
+            "-force_key_frames", "expr:gte(t,n_forced*1)",
+
 
             "-tune",
             "zerolatency",
@@ -80,7 +99,7 @@ class HLSStream:
             "3",
 
             "-hls_flags",
-            "delete_segments+append_list",
+            "delete_segments+omit_endlist",
 
             str(output),
         ]

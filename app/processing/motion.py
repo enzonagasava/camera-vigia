@@ -2,12 +2,32 @@ import cv2
 
 
 class MotionDetector:
-    def __init__(self, threshold: int = 5000):
+
+    def __init__(
+        self,
+        threshold: int = 5000,
+        width: int = 640,
+        height: int = 360,
+    ):
         self.threshold = threshold
+
+        self.width = width
+        self.height = height
+
         self.previous_frame = None
 
     def detect(self, frame) -> tuple[bool, int, object]:
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        small_frame = cv2.resize(
+            frame,
+            (self.width, self.height),
+            interpolation=cv2.INTER_AREA,
+        )
+
+        gray = cv2.cvtColor(
+            small_frame,
+            cv2.COLOR_BGR2GRAY,
+        )
 
         gray = cv2.GaussianBlur(
             gray,
@@ -16,7 +36,9 @@ class MotionDetector:
         )
 
         if self.previous_frame is None:
+
             self.previous_frame = gray
+
             return False, 0, frame
 
         difference = cv2.absdiff(
@@ -37,9 +59,13 @@ class MotionDetector:
             iterations=2,
         )
 
-        movement_pixels = cv2.countNonZero(threshold)
+        movement_pixels = cv2.countNonZero(
+            threshold
+        )
 
-        motion_detected = movement_pixels > self.threshold
+        motion_detected = (
+            movement_pixels > self.threshold
+        )
 
         self.previous_frame = gray
 
