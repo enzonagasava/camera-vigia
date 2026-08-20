@@ -15,6 +15,7 @@ from app.config import (
     FRAME_FPS,
     MOTION_ENABLED,
     MOTION_THRESHOLD,
+    MOTION_RECORDING_TIMEOUT,
     SAVE_VIDEO,
     SAVE_MOTION_IMAGES,
     create_directories,
@@ -103,20 +104,11 @@ def main():
         fps=STREAM_FPS,
     )
 
+    recording = False
+
+    last_motion_time = None
+    
     try:
-
-        # -----------------------------------------------------
-        # GRAVAÇÃO
-        # -----------------------------------------------------
-
-        if SAVE_VIDEO:
-
-            video_path = video_storage.start()
-
-            print(
-                f"Gravando vídeo em: {video_path}"
-            )
-
         # -----------------------------------------------------
         # HLS
         # -----------------------------------------------------
@@ -180,14 +172,31 @@ def main():
             processed_frame = result.frame
             
             processed_frame = add_timestamp(processed_frame)
+            hls_stream.write(processed_frame)
+
+
             # ================================================
-            # 3. MOVIMENTO
+            # 3. MOVIMENTO / GRAVAÇÃO
             # ================================================
 
-            if (
-                MOTION_ENABLED
-                and result.motion_detected
-            ):
+            current_time = cv2.getTickCount() / cv2.getTickFrequency()
+
+            if MOTION_ENABLED and result.motion_detected:
+
+                # Atualiza o momento do último movimento
+                last_motion_time = current_time
+
+                # Inicia a gravação somente se não estiver gravando
+                if SAVE_VIDEO and not recording:
+
+                    video_path = video_storage.start()
+
+                    recording = True
+
+                    print(
+                        f"Movimento detectado. "
+                        f"Iniciando gravação: {video_path}"
+                    )
 
                 cv2.putText(
                     processed_frame,
@@ -206,42 +215,36 @@ def main():
                         prefix="motion",
                     )
 
+
             # ================================================
-            # 4. STREAMING
-            #
-            # IMPORTANTE:
-            # usamos o frame ORIGINAL.
-            #
-            # Não usamos processed_frame.
+            # 4. ENCERRAMENTO DA GRAVAÇÃO
             # ================================================
 
-            current_time = cv2.getTickCount() / cv2.getTickFrequency()
+            if SAVE_VIDEO and recording:
 
-            if (
-                current_time - last_stream_time
-                >= stream_frame_interval
-            ):
-
-                stream_frame = cv2.resize(
-                    frame,
-                    (
-                        STREAM_WIDTH,
-                        STREAM_HEIGHT,
-                    ),
-                    interpolation=cv2.INTER_AREA,
+                elapsed_since_motion = (
+                    current_time - last_motion_time
                 )
 
-                hls_stream.write(
-                    stream_frame
-                )
+                if elapsed_since_motion >= MOTION_RECORDING_TIMEOUT:
 
-                last_stream_time = current_time
+                    video_storage.stop()
+
+                    recording = False
+                    last_motion_time = None
+
+                    print(
+                        f"Nenhum movimento por "
+                        f"{MOTION_RECORDING_TIMEOUT}s. "
+                        f"Gravação encerrada."
+                    )
+
 
             # ================================================
-            # 5. GRAVAÇÃO
+            # 5. GRAVAÇÃO DO FRAME
             # ================================================
 
-            if SAVE_VIDEO:
+            if SAVE_VIDEO and recording:
 
                 video_storage.write(
                     processed_frame
@@ -263,7 +266,7 @@ def main():
 
         camera.release()
 
-        if SAVE_VIDEO:
+        if SAVE_VIDEO and recording:
             video_storage.stop()
 
         cv2.destroyAllWindows()
@@ -271,7 +274,5 @@ def main():
         print(
             "Aplicação encerrada."
         )
-
-
 if __name__ == "__main__":
     main()
